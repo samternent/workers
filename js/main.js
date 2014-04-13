@@ -12,22 +12,12 @@ var tracking = tracking || (function () {
                 // won't need to store this on the client... remove
                 // just for checking data
                 this.trackingData = data;
-
-                // shitty temp code
-                var latestLine = data.mouseMove[data.mouseMove.length-1];
-                document.getElementById('data').innerHTML =
-                    'Time: ' + latestLine.timeStamp
-                    + ', Mouse x: ' + latestLine.mousePosition.x
-                    + ', Mouse y: ' + latestLine.mousePosition.y
-                    + '<br />';
-                // shitty temp code end
             }
         },
         webWorkerStuffs = {
             createTrackingWorker: function () {
                 if (typeof (Worker) !== undefined) {
                     trackingWorker = new Worker('/js/webworker.js');
-
                     trackingWorker.addEventListener('message', function (e) {
 
                         deleteThisPart.showData(e.data.data); // TODO: delete this line
@@ -38,26 +28,44 @@ var tracking = tracking || (function () {
             },
         },
         trackingStuffs = {
-            trackMouseMove: function () {
-                window.addEventListener('mousemove', function (e) {
-                    var trackingObject = { };
-                    if (trackingManager.mouse) {
-                        trackingObject.mouse = {
-                            x: e.clientX,
-                            y: e.clientY
-                        };
-                        trackingWorker.postMessage(JSON.stringify(trackingObject));
-                        trackingManager.mouse = false;
-                    }
-                }, false);
+            postTracking: function (e) {
+                var trackingObject = { };
+                if (trackingManager.mouse) {
+                    trackingObject = {
+                        x: e.clientX,
+                        y: e.clientY,
+                        timeStamp: e.timeStamp,
+                        targetId: e.target.id,
+                        data: e.target.dataset
+                    };
+                    trackingWorker.postMessage({'cmd': e.type, 'msg': JSON.stringify(trackingObject)});
+                    trackingManager.mouse = false;
+                }
+            },
+            // refactor these to make it more generic with switch case
+            eventListeners: function () {
+                // bind mouse move event
+                var events = [
+                    'mousemove',
+                    'click',
+                    'focus',
+                    'blur',
+                    'scroll',
+                ];
+
+                for (var i = 0; i < events.length; i++) {
+                    window.addEventListener(events[i], function (e) {
+                        trackingStuffs.postTracking(e);
+                    }, true);
+                }
             }
         },
         publicParts = {
             init: function () {
                 webWorkerStuffs.createTrackingWorker();
-                trackingStuffs.trackMouseMove();
+                trackingStuffs.eventListeners();
             },
-            trackingData: function () { return trackingData; }
+            trackingData: function () { return deleteThisPart.trackingData; }
         };
 
     return publicParts;

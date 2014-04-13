@@ -1,29 +1,36 @@
 console.log('created worker');  // confirm started
 
 var workerBee = workerBee || (function () {
-    var trackObj = {
-            mouseMove: []
-        },
+    var bigTrackObj = [],
         privateParts = {
             setTrackObject: function () {}
         },
         publicParts = {
-            addMouseTracking: function (trackingObj) {
-                var d = new Date();
-                var timeStap = d.getTime();
-
-                var mouseMoveObj = {
-                    timeStamp: timeStap,
-                    mousePosition: {
-                        x: trackingObj.mouse.x,
-                        y: trackingObj.mouse.y
+            addTracking: function (eventType, trackingObj) {
+                var trackObj = {
+                    type: eventType,
+                    details: {
+                        timeStamp: trackingObj.timeStamp,
+                        mousePosition: {
+                            x: trackingObj.x,
+                            y: trackingObj.y
+                        },
+                        targetId: trackingObj.targetId,
+                        dataset: trackingObj.data
                     }
                 };
-                trackObj.mouseMove.push(mouseMoveObj);
-                setTimeout(function () {
-                    self.postMessage({trigger: true, data: trackObj});
-                    clearTimeout();
-                }, 100);
+                bigTrackObj.push(trackObj);
+
+                if (eventType === 'mousemove') {
+                    setTimeout(function () {
+                        self.postMessage({trigger: true, data: bigTrackObj});
+                        socket.emit('trackingData', bigTrackObj);
+                        clearTimeout();
+                    }, 100);
+                } else {
+                    self.postMessage({trigger: true, data: bigTrackObj});
+                    socket.emit('trackingData', bigTrackObj);
+                }
             }
         };
 
@@ -32,5 +39,13 @@ var workerBee = workerBee || (function () {
 
 // listener
 self.addEventListener('message', function (e) {
-    workerBee.addMouseTracking(JSON.parse(e.data));
+    workerBee.addTracking(e.data.cmd, JSON.parse(e.data.msg));
 }, false);
+
+importScripts('http://localhost:3000/socket.io/socket.io.js');
+var socket = new io.connect('ws://localhost:3000');
+
+// Add a connect listener
+socket.on('connect',function() {
+    console.log('Client has connected to the server!');
+});

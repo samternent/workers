@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            * { margin: 0; padding: 0; }
+            #site { width: 100%; border: 0; opacity: 0.7}
+            #mouse {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 20px;
+                height: 20px;
+                background-color: red;
+                -webkit-transition: all .1s;
+                border-radius: 20px;
+                z-index: 999;
+            }
+        </style>
+    </head>
+    <body>
+        <iframe id="site" src="http://127.0.0.1:54666/index.html"></iframe>
+        <div id="mouse"></div>
+        <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+        <script>
+            var socket = new io.connect('ws://localhost:3000');
+
+            var sessionObject = {};
+
+            var mouse = document.getElementById('mouse'),
+                site = document.getElementById('site');
+            socket.on('displayData', function (data) {
+                sessionObject = data;
+
+                if (data[data.length-1].type === 'mousemove') {
+                    mouse.style.top = (data[data.length-1].details.mousePosition.y-10) + 'px';
+                    mouse.style.left = (data[data.length-1].details.mousePosition.x) + 'px';
+                }
+
+                if (data[data.length-1].type === 'click') {
+                    console.log('click')
+                }
+                if (data[data.length-1].type === 'scroll') {
+                    console.log(data[data.length-1].details);
+                    //myIframe.contentWindow.scrollTo(xcoord,ycoord);
+                }
+            });
+
+            window.onload = function () {
+                site.style.height = window.innerHeight + 'px';
+            };
+
+
+
+        </script>
+    </body>
+</html>
